@@ -11,33 +11,17 @@ from keras import layers
 from keras import models
 from IPython import display
 
-# Set the seed value for experiment reproducibility.
-# seed = 42
-# tf.random.set_seed(seed)
-# np.random.seed(seed)
-
 DATASET_PATH = 'data/recordings'
 data_dir = pathlib.Path(DATASET_PATH)
 
 digits = np.array(tf.io.gfile.listdir(str(data_dir)))
-# digits = digits[digits != 'README.md']
-print('Commands:', digits)
 
 filenames = tf.io.gfile.glob(str(data_dir) + '/*/*')
 filenames = tf.random.shuffle(filenames)
-# num_samples = len(filenames)
-# print('Number of total examples:', num_samples)
-# print('Number of examples per label:',
-#       len(tf.io.gfile.listdir(str(data_dir / digits[0]))))
-# print('Example file tensor:', filenames[0])
 
 train_files = filenames[:2000]
 val_files = filenames[2000: 2000 + 250]
 test_files = filenames[-250:]
-
-# print('Training set size', len(train_files))
-# print('Validation set size', len(val_files))
-# print('Test set size', len(test_files))
 
 test_file = tf.io.read_file(DATASET_PATH + '/4/4_george_7.wav')
 test_audio, _ = tf.audio.decode_wav(contents=test_file)
@@ -77,19 +61,26 @@ waveform_ds = files_ds.map(
     map_func=get_waveform_and_label,
     num_parallel_calls=AUTOTUNE)
 
-rows = 3
-cols = 3
+rows = 2
+cols = 5
 n = rows * cols
 fig, axes = plt.subplots(rows, cols, figsize=(10, 12))
+shown_labels = []
+k = 0
 
-for i, (audio, label) in enumerate(waveform_ds.take(n)):
-    r = i // cols
-    c = i % cols
-    ax = axes[r][c]
-    ax.plot(audio.numpy())
-    ax.set_yticks(np.arange(-1.2, 1.2, 0.2))
+for i, (audio, label) in enumerate(waveform_ds.take(n*5)):
     label = label.numpy().decode('utf-8')
-    ax.set_title(label)
+    if label not in shown_labels:
+        shown_labels.append(label)
+        r = k // cols
+        c = k % cols
+        ax = axes[r][c]
+        ax.plot(audio.numpy())
+        ax.set_yticks(np.arange(-1.2, 1.2, 0.2))
+        ax.set_title(label)
+        k = k + 1
+    if len(shown_labels) == n:
+        break
 
 plt.show()
 
@@ -165,18 +156,25 @@ spectrogram_ds = waveform_ds.map(
     map_func=get_spectrogram_and_label_id,
     num_parallel_calls=AUTOTUNE)
 
-rows = 3
-cols = 3
+rows = 2
+cols = 5
 n = rows * cols
 fig, axes = plt.subplots(rows, cols, figsize=(10, 10))
+shown_labels = []
+k = 0
 
-for i, (spectrogram, label_id) in enumerate(spectrogram_ds.take(n)):
-    r = i // cols
-    c = i % cols
-    ax = axes[r][c]
-    plot_spectrogram(spectrogram.numpy(), ax)
-    ax.set_title(digits[label_id.numpy()])
-    ax.axis('off')
+for i, (spectrogram, label_id) in enumerate(spectrogram_ds.take(n*5)):
+    if label_id not in shown_labels:
+        shown_labels.append(label_id)
+        r = k // cols
+        c = k % cols
+        ax = axes[r][c]
+        plot_spectrogram(spectrogram.numpy(), ax)
+        ax.set_title(digits[label_id.numpy()])
+        ax.axis('off')
+        k = k + 1
+    if len(shown_labels) == n:
+        break
 
 plt.show()
 
